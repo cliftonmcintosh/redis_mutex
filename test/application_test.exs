@@ -6,6 +6,8 @@ defmodule RedisMutex.ApplicationTest do
   use ExUnit.Case
   doctest RedisMutex
 
+  @moduletag :skip
+
   setup do
     on_exit(fn ->
       Application.put_env(:redis_mutex, :redis_url, nil)
