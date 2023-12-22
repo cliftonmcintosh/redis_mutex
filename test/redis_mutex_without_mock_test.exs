@@ -3,11 +3,15 @@ defmodule RedisMutexWithoutMockTest do
 
   @moduletag :redis_dependent
 
-  defmodule RedisMutexUser do
+  defmodule MyRedisMutex do
     use RedisMutex, otp_app: :redis_mutex, lock_module: RedisMutex.Lock
+  end
+
+  defmodule RedisMutexUser do
+    require RedisMutexWithoutMockTest.MyRedisMutex
 
     def two_threads_lock do
-      with_lock("two_threads_lock") do
+      MyRedisMutex.with_lock "two_threads_lock" do
         start_time = DateTime.utc_now()
         end_time = DateTime.utc_now()
         {start_time, end_time}
@@ -16,7 +20,7 @@ defmodule RedisMutexWithoutMockTest do
 
     def two_threads_one_loses_lock do
       try do
-        with_lock("two_threads_one_loses_lock", 500) do
+        MyRedisMutex.with_lock "two_threads_one_loses_lock", 100 do
           start_time = DateTime.utc_now()
           :timer.sleep(1000)
           end_time = DateTime.utc_now()
@@ -28,13 +32,13 @@ defmodule RedisMutexWithoutMockTest do
     end
 
     def long_running_task do
-      with_lock("two_threads_lock_expires", 10_000, 250) do
+      MyRedisMutex.with_lock "two_threads_lock_expires", 10_000, 250 do
         :timer.sleep(10_000)
       end
     end
 
     def quick_task do
-      with_lock("two_threads_lock_expires", 1000, 500) do
+      MyRedisMutex.with_lock "two_threads_lock_expires", 1000, 500 do
         "I RAN!!!"
       end
     end
@@ -42,7 +46,7 @@ defmodule RedisMutexWithoutMockTest do
 
   describe "with_lock/4" do
     setup do
-      start_supervised(RedisMutexUser, [])
+      start_supervised(MyRedisMutex, [])
       :ok
     end
 
@@ -77,6 +81,7 @@ defmodule RedisMutexWithoutMockTest do
 
       [result_1, result_2] =
         Enum.map(res, fn result ->
+          IO.puts("result: #{inspect(result)}")
           case result do
             {:ok, {start_time, end_time}} -> [start_time, end_time]
             error -> error

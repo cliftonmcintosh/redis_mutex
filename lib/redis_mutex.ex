@@ -2,6 +2,7 @@ defmodule RedisMutex do
   @moduledoc """
   An Elixir library for using Redis locks.
   """
+
   @type socket_options :: [
           customize_hostname_check: [
             match_fun: function()
@@ -31,7 +32,12 @@ defmodule RedisMutex do
         @default_lock_module
 
     quote do
-      import unquote(lock_module), warn: false
+      import RedisMutex, only: [with_lock: 2, with_lock: 3, with_lock: 4]
+      require unquote(lock_module)
+
+      @lock_module unquote(lock_module)
+      @default_timeout :timer.seconds(40)
+      @default_expiry :timer.seconds(20)
 
       def child_spec(opts \\ []) do
         %{
@@ -44,14 +50,26 @@ defmodule RedisMutex do
       @spec start_link([RedisMutex.start_options()]) :: Supervisor.on_start()
       def start_link(opts \\ []) do
         app = unquote(otp_app)
-        the_lock_module = unquote(lock_module)
 
         RedisMutex.Supervisor.start_link(
           app,
           __MODULE__,
-          the_lock_module,
+          @lock_module,
           opts ++ [name: RedisMutex]
         )
+      end
+
+    end
+  end
+
+  defmacro with_lock(key, timeout \\ @default_timeout, expiry \\ @default_expiry, do: clause) do
+    quote do
+      key = unquote(key)
+      timeout = unquote(timeout)
+      expiry = unquote(expiry)
+
+      @lock_module.with_lock(key, timeout, expiry) do
+        clause
       end
     end
   end
