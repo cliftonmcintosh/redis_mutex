@@ -20,10 +20,12 @@ if Code.ensure_loaded?(Redix) do
 
     @callback start_link(start_options :: start_options()) :: {:ok, pid()} | {:error, any()}
 
-    @callback with_lock(key :: String.t(), timeout :: integer(), expiry :: integer(),
-                do: clause :: term()
-              ) ::
-                any()
+    @callback with_lock(
+                key :: String.t(),
+                timeout :: integer(),
+                expiry :: integer(),
+                fun :: (-> any())
+              ) :: any()
 
     @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
     def child_spec(opts) do
@@ -52,22 +54,13 @@ if Code.ensure_loaded?(Redix) do
       end
     end
 
-    @spec with_lock(String.t(), integer(), integer(), do: term()) :: any()
-    defmacro with_lock(key, timeout \\ @default_timeout, expiry \\ @default_expiry, do: clause) do
-      quote do
-        key = unquote(key)
-        timeout = unquote(timeout)
-        expiry = unquote(expiry)
-        uuid = UUID.uuid1()
-
-        RedisMutex.Lock.take_lock(key, uuid, timeout, expiry)
-
-        block_value = unquote(clause)
-
-        RedisMutex.Lock.unlock(key, uuid)
-
-        block_value
-      end
+    @spec with_lock(key :: String.t(), timeout :: integer(), expiry :: integer(), fun :: (() -> any())) :: any()
+    def with_lock(key, timeout, expiry, fun) do
+      uuid = Uniq.UUID.uuid1()
+      RedisMutex.Lock.take_lock(key, uuid, timeout, expiry)
+      result = fun.()
+      RedisMutex.Lock.unlock(key, uuid)
+      result
     end
 
     @doc """

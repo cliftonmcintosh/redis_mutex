@@ -11,36 +11,36 @@ defmodule RedisMutexWithoutMockTest do
     require RedisMutexWithoutMockTest.MyRedisMutex
 
     def two_threads_lock do
-      MyRedisMutex.with_lock "two_threads_lock" do
+      MyRedisMutex.with_lock("two_threads_lock", fn ->
         start_time = DateTime.utc_now()
         end_time = DateTime.utc_now()
         {start_time, end_time}
-      end
+      end)
     end
 
     def two_threads_one_loses_lock do
       try do
-        MyRedisMutex.with_lock "two_threads_one_loses_lock", 100 do
+        MyRedisMutex.with_lock("two_threads_one_loses_lock", 100, fn ->
           start_time = DateTime.utc_now()
           :timer.sleep(1000)
           end_time = DateTime.utc_now()
           {start_time, end_time}
-        end
+        end)
       rescue
         RedisMutex.Error -> :timed_out
       end
     end
 
     def long_running_task do
-      MyRedisMutex.with_lock "two_threads_lock_expires", 10_000, 250 do
+      MyRedisMutex.with_lock("two_threads_lock_expires", 10_000, 250, fn ->
         :timer.sleep(10_000)
-      end
+      end)
     end
 
     def quick_task do
-      MyRedisMutex.with_lock "two_threads_lock_expires", 1000, 500 do
+      MyRedisMutex.with_lock("two_threads_lock_expires", 1000, 500, fn ->
         "I RAN!!!"
-      end
+      end)
     end
   end
 
@@ -81,7 +81,6 @@ defmodule RedisMutexWithoutMockTest do
 
       [result_1, result_2] =
         Enum.map(res, fn result ->
-          IO.puts("result: #{inspect(result)}")
           case result do
             {:ok, {start_time, end_time}} -> [start_time, end_time]
             error -> error

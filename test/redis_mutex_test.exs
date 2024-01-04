@@ -15,21 +15,17 @@ defmodule RedisMutexTest do
     require RedisMutexTest.MyRedisMutex
 
     def one_plus_one(key) do
-      MyRedisMutex.with_lock key do
-        1 + 1
-      end
+      MyRedisMutex.with_lock(key, fn -> 1 + 1 end)
     end
 
     def one_plus_two(key, timeout) do
-      MyRedisMutex.with_lock key, timeout do
-        1 + 2
-      end
+      MyRedisMutex.with_lock(key, timeout, fn -> 1 + 2 end)
     end
 
     def two_plus_two(key, timeout, expiry) do
-      MyRedisMutex.with_lock key, timeout, expiry do
+      MyRedisMutex.with_lock(key, timeout, expiry, fn ->
         2 + 2
-      end
+      end)
     end
   end
 
@@ -46,17 +42,12 @@ defmodule RedisMutexTest do
       my_timeout = 200
       my_expiry = 2_000
 
-      expect(LockMock, :with_lock, fn key, timeout, expiry, do_clause ->
+      expect(LockMock, :with_lock, fn key, timeout, expiry, fun ->
         assert key == my_key
         assert timeout == my_timeout
         assert expiry == my_expiry
 
-        [do: block_value] =
-          quote do
-            unquote(do_clause)
-          end
-
-        block_value
+        fun.()
       end)
 
       assert 4 == RedisMutexUser.two_plus_two(my_key, my_timeout, my_expiry)
@@ -65,15 +56,10 @@ defmodule RedisMutexTest do
     test "should handle two arguments" do
       my_key = "my-key"
 
-      expect(LockMock, :with_lock, fn key, _timeout, _expiry, do_clause ->
+      expect(LockMock, :with_lock, fn key, _timeout, _expiry, fun ->
         assert key == my_key
 
-        [do: block_value] =
-          quote do
-            unquote(do_clause)
-          end
-
-        block_value
+        fun.()
       end)
 
       assert 2 == RedisMutexUser.one_plus_one(my_key)
@@ -83,16 +69,11 @@ defmodule RedisMutexTest do
       my_key = "my-key"
       my_timeout = 200
 
-      expect(LockMock, :with_lock, fn key, timeout, _expiry, do_clause ->
+      expect(LockMock, :with_lock, fn key, timeout, _expiry, fun ->
         assert key == my_key
         assert timeout == my_timeout
 
-        [do: block_value] =
-          quote do
-            unquote(do_clause)
-          end
-
-        block_value
+        fun.()
       end)
 
       assert 3 == RedisMutexUser.one_plus_two(my_key, my_timeout)

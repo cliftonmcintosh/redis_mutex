@@ -21,6 +21,8 @@ defmodule RedisMutex do
   @type using_options :: {:otp_app, atom()}
 
   @default_lock_module RedisMutex.Lock
+  @default_timeout :timer.seconds(40)
+  @default_expiry :timer.seconds(20)
 
   @spec __using__([using_options()]) :: term()
   defmacro __using__(opts) do
@@ -32,7 +34,6 @@ defmodule RedisMutex do
         @default_lock_module
 
     quote do
-      import RedisMutex, only: [with_lock: 2, with_lock: 3, with_lock: 4]
       require unquote(lock_module)
 
       @lock_module unquote(lock_module)
@@ -59,17 +60,8 @@ defmodule RedisMutex do
         )
       end
 
-    end
-  end
-
-  defmacro with_lock(key, timeout \\ @default_timeout, expiry \\ @default_expiry, do: clause) do
-    quote do
-      key = unquote(key)
-      timeout = unquote(timeout)
-      expiry = unquote(expiry)
-
-      @lock_module.with_lock(key, timeout, expiry) do
-        clause
+      def with_lock(key, timeout \\ @default_timeout, expiry \\ @default_expiry, fun) do
+        @lock_module.with_lock(key, timeout, expiry, fun)
       end
     end
   end
