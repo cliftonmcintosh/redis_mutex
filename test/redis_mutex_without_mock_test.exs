@@ -4,11 +4,13 @@ defmodule RedisMutexWithoutMockTest do
   @moduletag :redis_dependent
 
   defmodule MyRedisMutex do
+    require Logger
     use RedisMutex, otp_app: :redis_mutex, lock_module: RedisMutex.Lock
   end
 
   defmodule RedisMutexUser do
-    require RedisMutexWithoutMockTest.MyRedisMutex
+    alias RedisMutexWithoutMockTest.MyRedisMutex
+    require Logger
 
     def two_threads_lock do
       MyRedisMutex.with_lock("two_threads_lock", fn ->

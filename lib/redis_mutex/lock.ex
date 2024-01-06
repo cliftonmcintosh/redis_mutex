@@ -50,11 +50,14 @@ if Code.ensure_loaded?(Redix) do
 
       case redis_url do
         nil ->
+        Logger.info("No redis_url")
           [name: name, sync_connect: true]
           |> Keyword.merge(redix_opts)
           |> Redix.start_link()
+          |> dbg()
 
         redis_url when is_binary(redis_url) ->
+          Logger.info("redis_url: #{redis_url}")
           Redix.start_link(redis_url, name: name, sync_connect: true)
       end
     end

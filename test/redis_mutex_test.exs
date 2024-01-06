@@ -9,6 +9,7 @@ defmodule RedisMutexTest do
 
   defmodule MyRedisMutex do
     use RedisMutex, otp_app: :redis_mutex, lock_module: RedisMutex.LockMock
+    require Logger
   end
 
   defmodule RedisMutexUser do
