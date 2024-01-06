@@ -4,6 +4,8 @@ if Code.ensure_loaded?(Redix) do
     Defines the lock behaviour for RedisMutex.
     """
 
+    require Logger
+
     @default_timeout :timer.seconds(40)
     @default_expiry :timer.seconds(20)
     @unlock_script """
@@ -42,6 +44,9 @@ if Code.ensure_loaded?(Redix) do
     def start_link(start_options \\ []) do
       {redis_url, redix_opts} = Keyword.pop(start_options, :redis_url)
       {name, redix_opts} = Keyword.pop(redix_opts, :name)
+      Logger.info("#{__MODULE__} Lock start options: #{inspect(start_options)}")
+      Logger.info("#{__MODULE__} redix_opts: #{inspect(redix_opts)}")
+      Logger.info("#{__MODULE__} redis_url: #{redis_url}")
 
       case redis_url do
         nil ->
@@ -54,7 +59,12 @@ if Code.ensure_loaded?(Redix) do
       end
     end
 
-    @spec with_lock(key :: String.t(), timeout :: integer(), expiry :: integer(), fun :: (() -> any())) :: any()
+    @spec with_lock(
+            key :: String.t(),
+            timeout :: integer(),
+            expiry :: integer(),
+            fun :: (-> any())
+          ) :: any()
     def with_lock(key, timeout, expiry, fun) do
       uuid = Uniq.UUID.uuid1()
       RedisMutex.Lock.take_lock(key, uuid, timeout, expiry)
