@@ -3,6 +3,8 @@ defmodule RedisMutex do
   An Elixir library for using Redis locks.
   """
 
+  require Logger
+
   @type socket_options :: [
           customize_hostname_check: [
             match_fun: function()
@@ -30,7 +32,7 @@ defmodule RedisMutex do
     Logger.info("#{__MODULE__} module name")
     Logger.info("#{__MODULE__} __using__ opts: #{inspect(opts)}")
     {otp_app, otp_app_opts} = Keyword.pop(opts, :otp_app)
-    config_opts = Application.get_env(otp_app, __MODULE__)
+    config_opts = Application.get_env(otp_app, __MODULE__, [])
     start_opts = Keyword.merge(config_opts, otp_app_opts)
     Logger.info("#{__MODULE__} __using__ config_opts: #{inspect(config_opts)}")
     Logger.info("#{__MODULE__} __using__ otp_app_opts: #{inspect(otp_app_opts)}")
@@ -71,7 +73,11 @@ defmodule RedisMutex do
 
         Logger.info("RedisMutex, module: #{__MODULE__}, start_link opts #{inspect(opts)}")
 
+        Logger.info("RedisMutex, start_link unquote(start_opts) : #{inspect(unquote(start_opts))}")
+
         supervisor_opts = Keyword.merge(unquote(start_opts), opts)
+        Logger.info("RedisMutex, module: #{__MODULE__}, start_link supervisor_opts #{inspect(supervisor_opts)}")
+
 
         RedisMutex.Supervisor.start_link(
           app,
